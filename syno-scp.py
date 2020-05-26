@@ -14,9 +14,9 @@ with open('config.json', 'r') as configJson:
 
 
 def createDir(dir):
-    fullDir = Path(dir).resolve()
-    if not os.path.exists(fullDir):
-        fullDir.mkdir(parents=True)
+    full_dir = Path(dir).resolve()
+    if not os.path.exists(full_dir):
+        full_dir.mkdir(parents=True)
     else:
         pass
 
@@ -33,11 +33,11 @@ def force_copy(file, dest, name):
         shutil.copy(file, dest)
 
 # Process temp directory
-dirTemp = 'temp'
-if (os.path.exists(Path(dirTemp).resolve())):
-    shutil.rmtree(dirTemp, onerror=del_rw)
+dir_temp = 'temp'
+if (os.path.exists(Path(dir_temp).resolve())):
+    shutil.rmtree(dir_temp, onerror=del_rw)
 else:
-    createDir(dirTemp)
+    createDir(dir_temp)
 
 
 # SSH Connection
@@ -55,48 +55,51 @@ print("Connected")
 # SCP Download
 print("\nDownloading certificates...")
 scp = SCPClient(ssh.get_transport())
-scp.get('/usr/syno/etc/certificate/_archive/', dirTemp, True)
+scp.get('/usr/syno/etc/certificate/_archive/', dir_temp, True)
 ssh.close()
 print("Downloaded")
 
 # Get domains in temp folder
 print("\nGet domains from Synology's certificates...")
-synoDomains = []
-for folder in os.walk(dirTemp):
+syno_domains = []
+for folder in os.walk(dir_temp):
     if ('renew.json' in folder[2]):
         with open(folder[0] + "\\" + "renew.json", "r") as renewJson:
-            synoDomain = collections.defaultdict(list)
-            synoDomain["domain"] = json.load(renewJson)['domains']
-            synoDomain["folder"] = folder[0]
-            synoDomains.append(synoDomain)
+            syno_domain = collections.defaultdict(list)
+            syno_domain["domain"] = json.load(renewJson)['domains']
+            syno_domain["folder"] = folder[0]
+            syno_domains.append(syno_domain)
     else:
         pass
 
 print("Domains found: ")
-for item in synoDomains:
+for item in syno_domains:
     print(item["domain"])
 
 # Match with user list in config.json
-foldersMatch = []
+folders_match = []
 print("\nChecking domains...")
-for userCertificate in settings['certificatesConfig']:
-    if not any(d['domain'] == userCertificate["domain"] for d in synoDomains):
-        print("Certificate for", userCertificate["domain"], "was not found")
+for user_certificate in settings['certificatesConfig']:
+    if not any(d['domain'] == user_certificate["domain"] for d in syno_domains):
+        print("Certificate for", user_certificate["domain"], "was not found")
     else:
-        print("Certificate for", userCertificate["domain"], "was found")
-        folderMatch = collections.defaultdict(list)
-        folderMatch["synoFolder"] = next(item for item in synoDomains if item["domain"] == userCertificate["domain"])["folder"]
-        folderMatch["userFolder"] = userCertificate["folder"]
-        foldersMatch.append(folderMatch)
+        print("Certificate for", user_certificate["domain"], "was found")
+        folder_match = collections.defaultdict(list)
+        folder_match["synoFolder"] = next(item for item in syno_domains if item["domain"] == user_certificate["domain"])["folder"]
+        folder_match["userFolder"] = user_certificate["folder"]
+        folders_match.append(folder_match)
+if(len(folders_match) == 0):
+    shutil.rmtree(dir_temp, onerror=del_rw)
+    sys.exit("No domains available")
 
 # Copy files
 print("\nCopy files...")
-for match in foldersMatch:
+for match in folders_match:
     createDir(match["userFolder"])
     for fileName in os.listdir(match["synoFolder"]):
         if (fileName == "privkey.pem" or fileName == "cert.pem"):
             force_copy(os.path.join(match["synoFolder"], fileName), match["userFolder"], fileName)
             print("Copied " + match["synoFolder"] + "\\" + fileName + " -> " + match["userFolder"])
-shutil.rmtree(dirTemp, onerror=del_rw)
+shutil.rmtree(dir_temp, onerror=del_rw)
 print("Done\n")
     
