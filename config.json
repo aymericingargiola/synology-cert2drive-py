@@ -1,0 +1,16 @@
+{
+    "synologyConfig": {
+        "host": "1.2.3.4",
+        "port": 22,
+        "username": "root"
+    },
+    "certificatesConfig": [
+        {
+            "domain": "exemple.com",
+            "folder": "path/where/you/want/cert/files"
+        }
+    ],
+    "sshConfig": {
+        "privateKey": "C:/Path/To/Your/.ssh/id_rsa"
+    }
+}
