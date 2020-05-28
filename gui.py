@@ -1,4 +1,5 @@
 import json
+import collections
 from tkinter import *
 from tkinter.filedialog import *
 from tkinter import messagebox
@@ -10,6 +11,15 @@ def update_config():
     cert2drive.settings["synology_config"]["port"] = int(entry_port.get())
     cert2drive.settings["synology_config"]["username"] = entry_username.get()
     cert2drive.settings["ssh_config"]["private_key"] = entry_private_key.get()
+    print(cert2drive.settings["certificates_config"])
+    entry_folders_domains = []
+    for entry_folder, entry_domain in zip(entry_folders, entry_domains):
+        entry_folder_domain = collections.defaultdict(list)
+        entry_folder_domain["domain"] = entry_domains[entry_domain].get()
+        entry_folder_domain["folder"] = entry_folders[entry_folder].get()
+        entry_folders_domains.append(entry_folder_domain)
+    cert2drive.settings["certificates_config"] = entry_folders_domains
+    print(cert2drive.settings["certificates_config"])
 
 
 def update():
@@ -25,7 +35,7 @@ def update():
             title="Updated", message="Error")
 
 
-def add_cert_entry():
+def add_cert_entry(user_certificate=False):
     row_position = len(entry_domains) + len(entry_folders) + 4 + 1
     i = len(entry_domains) + 1
     lb = Label(window, text="Domain "+str(i)+" :", bg="#2B2B2B", fg="white")
@@ -35,6 +45,9 @@ def add_cert_entry():
     e = Entry(window)
     e.grid(column=1, row=row_position, ipadx=5, pady=5, sticky=W+E)
     entry_domains["domain" + str(i)] = e
+    if(user_certificate):
+        entry_domains["domain" + str(i)].insert(
+            END, user_certificate["domain"])
 
     lb = Label(window, text="Folder "+str(i)+" :", bg="#2B2B2B", fg="white")
     lb.grid(column=0, row=row_position+1, ipadx=5, pady=5, sticky=W+N)
@@ -43,13 +56,71 @@ def add_cert_entry():
     e = Entry(window)
     e.grid(column=1, row=row_position+1, ipadx=5, pady=5, sticky=W+E)
     entry_folders["folder" + str(i)] = e
+    if (user_certificate):
+        entry_folders["folder" + str(i)].insert(
+            END, user_certificate["folder"])
 
     b = Button(
         window, text="Browse", bg="white", fg="#2B2B2B", relief='flat', highlightthickness=0, bd=0)
-    b['command'] = lambda arg="folder" + str(i): browse_folder(arg)
+    b['command'] = lambda arg=entry_folders["folder" +
+                                            str(i)]: browse_folder(arg)
     b.grid(column=4, row=row_position + 1,
            padx=10, pady=5, sticky=W + N)
     entry_folders_btn["folderbtn" + str(i)] = b
+
+    remove_entry_domain_btn["removedomainbtn" + str(i)] = Button(
+        window, text="Remove", bg="white", fg="#2B2B2B", relief='flat', highlightthickness=0, bd=0)
+    remove_entry_domain_btn["removedomainbtn" + str(i)]['command'] = lambda arg1=entry_domains["domain" + str(i)], arg2=label_domains["domain" + str(
+        i)], arg3=entry_folders["folder" + str(i)], arg4=label_folders["folder" + str(
+            i)], arg5=remove_entry_domain_btn["removedomainbtn" + str(i)], arg6=entry_folders_btn["folderbtn" + str(i)]: remove_items(arg1, arg2, arg3, arg4, arg5, arg6)
+    remove_entry_domain_btn["removedomainbtn" + str(i)].grid(column=4, row=row_position,
+                                                             padx=10, pady=5, sticky=W + N)
+
+
+def save_config():
+    update_config()
+    with open('config.json', 'w') as configJson:
+        json.dump(cert2drive.settings, configJson)
+    print("Config saved")
+
+
+def remove_items(*args):
+    print(args)
+    for arg in args:
+        for key, value in entry_folders.items():
+            if value is arg:
+                del entry_folders[key]
+                break
+        for key, value in entry_domains.items():
+            if value is arg:
+                del entry_domains[key]
+                break
+        for key, value in label_folders.items():
+            if value is arg:
+                del label_folders[key]
+                break
+        for key, value in label_domains.items():
+            if value is arg:
+                del label_domains[key]
+                break
+        for key, value in entry_folders_btn.items():
+            if value is arg:
+                del entry_folders_btn[key]
+                break
+        for key, value in remove_entry_domain_btn.items():
+            if value is arg:
+                del remove_entry_domain_btn[key]
+                break
+        arg.destroy()
+    entry_folders_domains = []
+    print(entry_domains)
+    for entry_folder, entry_domain in zip(entry_folders, entry_domains):
+        entry_folder_domain = collections.defaultdict(list)
+        entry_folder_domain["domain"] = entry_domains[entry_domain].get()
+        entry_folder_domain["folder"] = entry_folders[entry_folder].get()
+        entry_folders_domains.append(entry_folder_domain)
+        cert2drive.settings["certificates_config"] = entry_folders_domains
+        print(cert2drive.settings["certificates_config"])
 
 
 def browse_file(context):
@@ -59,29 +130,13 @@ def browse_file(context):
         entry_private_key.delete(0, END)
         entry_private_key.insert(
             END, file_name)
-        cert2drive.settings["ssh_config"]["private_key"] = file_name
-        print(file_name)
 
 
 def browse_folder(context):
     folder = askdirectory(
         initialdir="/", title="Select a folder")
-    entry_folders[context].delete(0, END)
-    entry_folders[context].insert(
-        END, folder)
-    # if (context == "__private_key__"):
-    #     entry_private_key.delete(0, END)
-    #     entry_private_key.insert(
-    #         END, file_name)
-    #     cert2drive.settings["ssh_config"]["private_key"] = file_name
-    #     print(file_name)
-
-
-def save_config():
-    update_config()
-    with open('config.json', 'w') as configJson:
-        json.dump(cert2drive.settings, configJson)
-    print("Config saved")
+    context.delete(0, END)
+    context.insert(END, folder)
 
 
 # init
@@ -148,40 +203,12 @@ private_key_browse_btn.grid(column=4, row=3, padx=10, pady=5, sticky=W + N)
 # Entry Certificates Options
 entry_domains = {}
 label_domains = {}
+remove_entry_domain_btn = {}
 entry_folders = {}
 label_folders = {}
 entry_folders_btn = {}
-i = 1
-row = 4
 for user_certificate in cert2drive.settings['certificates_config']:
-    lb = Label(window, text="Domain "+str(i)+" :", bg="#2B2B2B", fg="white")
-    lb.grid(column=0, row=row, ipadx=5, pady=5, sticky=W+N)
-    label_domains["domain" + str(i)] = lb
-
-    e = Entry(window)
-    e.grid(column=1, row=row, ipadx=5, pady=5, sticky=W+E)
-    e.insert(
-        END, user_certificate["domain"])
-    entry_domains["domain" + str(i)] = e
-
-    lb = Label(window, text="Folder "+str(i)+" :", bg="#2B2B2B", fg="white")
-    lb.grid(column=0, row=row+1, ipadx=5, pady=5, sticky=W+N)
-    label_folders["folder" + str(i)] = lb
-
-    e = Entry(window)
-    e.grid(column=1, row=row+1, ipadx=5, pady=5, sticky=W+E)
-    e.insert(
-        END, user_certificate["folder"])
-    entry_folders["folder" + str(i)] = e
-
-    b = Button(
-        window, text="Browse", bg="white", fg="#2B2B2B", relief='flat', highlightthickness=0, bd=0)
-    b['command'] = lambda arg="folder" + str(i): browse_folder(arg)
-    b.grid(column=4, row=row + 1,
-           padx=10, pady=5, sticky=W + N)
-    entry_folders_btn["folderbtn" + str(i)] = b
-    i += 1
-    row += 2
+    add_cert_entry(user_certificate)
 
 # Add entry cert button
 update_cert_btn = Button(window, text="Add",
