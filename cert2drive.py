@@ -49,16 +49,26 @@ def update_cert():
     try:
         ssh.connect(
             hostname=settings['synology_config']['host'],
+            port=settings['synology_config']['port'],
             username=settings['synology_config']['username'],
             pkey=paramiko.RSAKey.from_private_key_file(
                 settings['ssh_config']['private_key'])
         )
     except Exception as exception:
         print(type(exception).__name__)
+        print(exception)
         if (type(exception).__name__ == "UnicodeDecodeError"):
-            print("Error : This private key is not supported.")
+            print("Error : This private key is not supported")
         elif (type(exception).__name__ == "FileNotFoundError"):
-            print("Error : Your private key was not found.")
+            print("Error : Your private key was not found")
+        elif (type(exception).__name__ == "NoValidConnectionsError"):
+            print("Error : Port is not reachable")
+        elif (type(exception).__name__ == "gaierror"):
+            print("Error : Host is not reachable")
+        elif (type(exception).__name__ == "AuthenticationException"):
+            print("Error : Authentication failed")
+        elif (type(exception).__name__ == "OSError"):
+            return update_cert()
         return -1
     print("Connected")
 
