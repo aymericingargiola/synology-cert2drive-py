@@ -1,4 +1,5 @@
-/test
-/test[0-9]
-/temp
-/__pycache__
+synology-cert2drive/test
+synology-cert2drive/test[0-9]
+synology-cert2drive/temp
+synology-cert2drive/__pycache__
+synology_cert2drive.egg-info

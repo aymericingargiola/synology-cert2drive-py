@@ -3,7 +3,7 @@ import collections
 from tkinter import *
 from tkinter.filedialog import *
 from tkinter import messagebox
-import cert2drive
+import synocert2drive
 import base64
 import zlib
 
@@ -22,22 +22,24 @@ def update_scrollregion(event):
 
 
 def update_config():
-    cert2drive.settings["synology_config"]["host"] = entry_host.get()
-    cert2drive.settings["synology_config"]["port"] = int(entry_port.get())
-    cert2drive.settings["synology_config"]["username"] = entry_username.get()
-    cert2drive.settings["ssh_config"]["private_key"] = entry_private_key.get()
+    synocert2drive.settings["synology_config"]["host"] = entry_host.get()
+    synocert2drive.settings["synology_config"]["port"] = int(entry_port.get())
+    synocert2drive.settings["synology_config"]["username"] = entry_username.get(
+    )
+    synocert2drive.settings["ssh_config"]["private_key"] = entry_private_key.get(
+    )
     entry_folders_domains = []
     for entry_folder, entry_domain in zip(entry_folders, entry_domains):
         entry_folder_domain = collections.defaultdict(list)
         entry_folder_domain["domain"] = entry_domains[entry_domain].get()
         entry_folder_domain["folder"] = entry_folders[entry_folder].get()
         entry_folders_domains.append(entry_folder_domain)
-    cert2drive.settings["certificates_config"] = entry_folders_domains
+    synocert2drive.settings["certificates_config"] = entry_folders_domains
 
 
 def update():
     update_config()
-    result = cert2drive.update_cert()
+    result = synocert2drive.update_cert()
     if(result["code"] == 1):
         print(result["message"])
         messagebox.showinfo(
@@ -93,7 +95,7 @@ def add_cert_entry(user_certificate=False):
 def save_config():
     update_config()
     with open('config.json', 'w') as configJson:
-        json.dump(cert2drive.settings, configJson)
+        json.dump(synocert2drive.settings, configJson)
     print("Config saved")
 
 
@@ -130,7 +132,7 @@ def remove_items(*args):
         entry_folder_domain["domain"] = entry_domains[entry_domain].get()
         entry_folder_domain["folder"] = entry_folders[entry_folder].get()
         entry_folders_domains.append(entry_folder_domain)
-        cert2drive.settings["certificates_config"] = entry_folders_domains
+        synocert2drive.settings["certificates_config"] = entry_folders_domains
 
 
 def browse_file(context):
@@ -166,7 +168,7 @@ fileMenu.add_command(label="Exit", command=window.quit)
 
 
 # Edit window
-window.title("Synology cert2drive")
+window.title("Synology synocert2drive")
 window.geometry("800x215")
 window.minsize(800, 215)
 window.iconbitmap(default=ICON)
@@ -201,7 +203,7 @@ label_host = Label(window, text="Host :", bg=c_black, fg="white")
 label_host.grid(column=0, row=0, ipadx=5, pady=5, sticky=W+N)
 entry_host = Entry(window)
 entry_host.insert(
-    END, cert2drive.settings["synology_config"]["host"])
+    END, synocert2drive.settings["synology_config"]["host"])
 entry_host.grid(column=1, row=0, ipadx=5, pady=5, sticky=W+E)
 
 # Entry Port
@@ -209,7 +211,7 @@ label_port = Label(window, text="Port :", bg=c_black, fg="white")
 label_port.grid(column=0, row=1, ipadx=5, pady=5, sticky=W+N)
 entry_port = Entry(window)
 entry_port.insert(
-    END, cert2drive.settings["synology_config"]["port"])
+    END, synocert2drive.settings["synology_config"]["port"])
 entry_port.grid(column=1, row=1, ipadx=5, pady=5, sticky=W+E)
 
 # Entry User name
@@ -217,7 +219,7 @@ label_username = Label(window, text="User name :", bg=c_black, fg="white")
 label_username.grid(column=0, row=2, ipadx=5, pady=5, sticky=W+N)
 entry_username = Entry(window)
 entry_username.insert(
-    END, cert2drive.settings["synology_config"]["username"])
+    END, synocert2drive.settings["synology_config"]["username"])
 entry_username.grid(column=1, row=2, ipadx=5, pady=5, sticky=W+E)
 
 # Browse private key
@@ -226,7 +228,7 @@ label_private_key = Label(window, text="Private key :",
 label_private_key.grid(column=0, row=3, ipadx=5, pady=5, sticky=W+N)
 entry_private_key = Entry(window)
 entry_private_key.insert(
-    END, cert2drive.settings["ssh_config"]["private_key"])
+    END, synocert2drive.settings["ssh_config"]["private_key"])
 entry_private_key.grid(column=1, row=3,
                        ipadx=5, pady=5, sticky=W+E)
 private_key_browse_btn = Button(
@@ -241,7 +243,7 @@ remove_entry_domain_btn = {}
 entry_folders = {}
 label_folders = {}
 entry_folders_btn = {}
-for user_certificate in cert2drive.settings['certificates_config']:
+for user_certificate in synocert2drive.settings['certificates_config']:
     add_cert_entry(user_certificate)
 
 # Add entry cert button
