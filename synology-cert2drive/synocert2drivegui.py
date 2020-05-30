@@ -94,7 +94,7 @@ def add_cert_entry(user_certificate=False):
 
 def save_config():
     update_config()
-    with open('config.json', 'w') as configJson:
+    with open('config/config.json', 'w') as configJson:
         json.dump(synocert2drive.settings, configJson)
     print("Config saved")
 

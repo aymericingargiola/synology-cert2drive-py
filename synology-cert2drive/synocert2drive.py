@@ -9,7 +9,7 @@ import json
 import paramiko
 import scp
 
-with open('config.json', 'r') as configJson:
+with open('config/config.json', 'r') as configJson:
     settings = json.load(configJson)
 
 
