@@ -17,6 +17,10 @@ ICON = zlib.decompress(base64.b64decode('eJxjYGAEQgEBBiDJwZDBy'
                                         'sAgxsDAoAHEQCEGBQaIOAg4sDIgACMUj4JRMApGwQgF/ykEAFXxQRc='))
 
 
+def update_scrollregion(event):
+    certCanvas.configure(scrollregion=certCanvas.bbox("all"))
+
+
 def update_config():
     cert2drive.settings["synology_config"]["host"] = entry_host.get()
     cert2drive.settings["synology_config"]["port"] = int(entry_port.get())
@@ -33,37 +37,36 @@ def update_config():
 
 def update():
     update_config()
-    is_updated = cert2drive.update_cert()
-    if(is_updated == 1):
-        print("done")
+    result = cert2drive.update_cert()
+    if(result["code"] == 1):
+        print(result["message"])
         messagebox.showinfo(
-            title="Updated", message="Certificates has been saved")
+            title="Updated", message=result["message"])
     else:
-        print("error")
+        print(result["message"])
         messagebox.showerror(
-            title="Updated", message="Error")
+            title="Error", message=result["message"])
 
 
 def add_cert_entry(user_certificate=False):
     row_position = len(entry_domains) + len(entry_folders) + 4 + 1
     i = len(entry_domains) + 1
-    lb = Label(window, text="Domain "+str(i)+" :", bg=c_black, fg="white")
+    lb = Label(canvasFrame, text="Domain "+str(i)+" :", bg=c_black, fg="white")
     lb.grid(column=0, row=row_position, ipadx=5, pady=5, sticky=W+N)
     label_domains["domain" + str(i)] = lb
 
-    e = Entry(window)
+    e = Entry(canvasFrame,  width=29)
     e.grid(column=1, row=row_position, ipadx=5, pady=5, sticky=W+E)
     entry_domains["domain" + str(i)] = e
     if(user_certificate):
         entry_domains["domain" + str(i)].insert(
             END, user_certificate["domain"])
 
-    lb = Label(window, text="Folder for Domain " +
-               str(i)+" :", bg=c_black, fg="white")
+    lb = Label(canvasFrame, text="Folder :", bg=c_black, fg="white")
     lb.grid(column=0, row=row_position+1, ipadx=5, pady=5, sticky=W+N)
     label_folders["folder" + str(i)] = lb
 
-    e = Entry(window)
+    e = Entry(canvasFrame)
     e.grid(column=1, row=row_position+1, ipadx=5, pady=5, sticky=W+E)
     entry_folders["folder" + str(i)] = e
     if (user_certificate):
@@ -71,7 +74,7 @@ def add_cert_entry(user_certificate=False):
             END, user_certificate["folder"])
 
     b = Button(
-        window, text="Browse", bg=c_black_light, fg="white", relief="flat", overrelief="flat", activebackground=c_black_lighter, activeforeground="white", highlightthickness=0, bd=0)
+        canvasFrame, text="Browse", bg=c_black_light, fg="white", relief="flat", overrelief="flat", activebackground=c_black_lighter, activeforeground="white", highlightthickness=0, bd=0)
     b['command'] = lambda arg=entry_folders["folder" +
                                             str(i)]: browse_folder(arg)
     b.grid(column=4, row=row_position, rowspan=2,
@@ -79,7 +82,7 @@ def add_cert_entry(user_certificate=False):
     entry_folders_btn["folderbtn" + str(i)] = b
 
     remove_entry_domain_btn["removedomainbtn" + str(i)] = Button(
-        window, text="Remove", bg=c_red_light, fg="white", activebackground=c_red, activeforeground="white", relief="flat", overrelief="flat", highlightthickness=0, bd=0)
+        canvasFrame, text="Remove", bg=c_red_light, fg="white", activebackground=c_red, activeforeground="white", relief="flat", overrelief="flat", highlightthickness=0, bd=0)
     remove_entry_domain_btn["removedomainbtn" + str(i)]['command'] = lambda arg1=entry_domains["domain" + str(i)], arg2=label_domains["domain" + str(
         i)], arg3=entry_folders["folder" + str(i)], arg4=label_folders["folder" + str(
             i)], arg5=remove_entry_domain_btn["removedomainbtn" + str(i)], arg6=entry_folders_btn["folderbtn" + str(i)]: remove_items(arg1, arg2, arg3, arg4, arg5, arg6)
@@ -148,7 +151,6 @@ def browse_folder(context):
 
 # init
 window = Tk()
-window.iconbitmap(default=ICON)
 
 # Menu
 menubar = Menu(tearoff=False)
@@ -165,11 +167,34 @@ fileMenu.add_command(label="Exit", command=window.quit)
 
 # Edit window
 window.title("Synology cert2drive")
-window.geometry("480x600")
-window.minsize(480, 272)
-# window.iconbitmap("icon.ico")
-window.configure(menu=menubar)
-window.config(background=c_black)
+window.geometry("800x215")
+window.minsize(800, 215)
+window.iconbitmap(default=ICON)
+window.config(menu=menubar, background=c_black)
+
+# Frame
+certFrame = Frame(window, bg=c_black, bd=0, relief='ridge')
+certFrame.grid(row=0, column=5, rowspan=4, sticky=N+S+E+W)
+certFrame.rowconfigure(0, weight=1)
+certFrame.columnconfigure(0, weight=1)
+
+certCanvas = Canvas(certFrame, bg=c_black, bd=0,
+                    highlightthickness=0, relief='ridge')
+certCanvas.grid(row=0, column=0, sticky=N+S+E+W)
+certCanvas.config(height=100, bd=0, relief=FLAT)
+
+canvasFrame = Frame(certCanvas, bg=c_black, bd=0, relief='ridge')
+canvasFrame.pack(fill="both", expand=True, padx=20, pady=20)
+canvasFrame.rowconfigure(0, weight=1)
+canvasFrame.columnconfigure(0, weight=1)
+certCanvas.create_window(0, 0, window=canvasFrame, anchor='nw')
+
+certScroll = Scrollbar(certFrame, orient=VERTICAL)
+certScroll.config(command=certCanvas.yview, bd=0, relief=FLAT)
+certCanvas.config(yscrollcommand=certScroll.set)
+certScroll.grid(row=0, column=1, sticky="ns")
+
+window.bind("<Configure>", update_scrollregion)
 
 # Entry Host
 label_host = Label(window, text="Host :", bg=c_black, fg="white")
@@ -207,7 +232,7 @@ entry_private_key.grid(column=1, row=3,
 private_key_browse_btn = Button(
     window, text="Browse", bg=c_black_light, fg="white", relief="flat", overrelief="flat", activebackground=c_black_lighter, activeforeground="white", highlightthickness=0, bd=0, command=lambda: browse_file("__private_key__"))
 private_key_browse_btn.grid(
-    column=4, row=3, columnspan=2, padx=10, pady=5, sticky=N + E + S + W)
+    column=4, row=3, padx=10, pady=5, sticky=N + E + S + W)
 
 # Entry Certificates Options
 entry_domains = {}
@@ -220,17 +245,17 @@ for user_certificate in cert2drive.settings['certificates_config']:
     add_cert_entry(user_certificate)
 
 # Add entry cert button
-add_cert_btn = Button(window, text="Add",
+add_cert_btn = Button(window, text="Add Domain",
                       bg=c_black_light, fg="white", relief="flat", overrelief="flat", activebackground=c_black_lighter, activeforeground="white", highlightthickness=0, bd=0, command=add_cert_entry)
-add_cert_btn.grid(column=1, columnspan=1, row=98, rowspan=1,
-                  padx=0, pady=5, sticky=W+E+S+N)
+add_cert_btn.grid(column=5, row=98,
+                  padx=(8, 22), pady=5, sticky=W+E+S+N)
 window.grid_columnconfigure(1, weight=1)
 
 # Update cert button
-update_cert_btn = Button(window, text="Update",
+update_cert_btn = Button(window, height=2, text="Update",
                          bg=c_black_light, fg="white", relief="flat", overrelief="flat", activebackground=c_black_lighter, activeforeground="white", highlightthickness=0, bd=0, command=update)
-update_cert_btn.grid(column=1, columnspan=1, row=99, rowspan=1,
-                     padx=0, pady=5, sticky=W+E+S+N)
+update_cert_btn.grid(column=0, columnspan=6, row=99,
+                     padx=0, pady=(25, 5), sticky=W+E+S+N)
 window.grid_columnconfigure(1, weight=1)
 
 # Add frames

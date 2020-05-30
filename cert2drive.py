@@ -9,6 +9,9 @@ import json
 import paramiko
 import scp
 
+with open('config.json', 'r') as configJson:
+    settings = json.load(configJson)
+
 
 def create_dir(dir):
     full_dir = pathlib.Path(dir).resolve()
@@ -29,11 +32,8 @@ def force_copy(file, dest, name):
         shutil.copy(file, dest)
 
 
-with open('config.json', 'r') as configJson:
-    settings = json.load(configJson)
-
-
 def update_cert():
+    result = collections.defaultdict(list)
 
     # Process temp directory
     dir_temp = 'temp'
@@ -55,21 +55,29 @@ def update_cert():
                 settings['ssh_config']['private_key'])
         )
     except Exception as exception:
-        print(type(exception).__name__)
-        print(exception)
         if (type(exception).__name__ == "UnicodeDecodeError"):
             print("Error : This private key is not supported")
+            result["message"] = "This private key is not supported"
         elif (type(exception).__name__ == "FileNotFoundError"):
             print("Error : Your private key was not found")
-        elif (type(exception).__name__ == "NoValidConnectionsError"):
+            result["message"] = "Your private key was not found"
+        elif (type(exception).__name__ == "NoValidConnectionsError" or type(exception).__name__ == "SSHException"):
             print("Error : Port is not reachable")
+            result["message"] = "Port is not reachable"
         elif (type(exception).__name__ == "gaierror"):
             print("Error : Host is not reachable")
+            result["message"] = "Host is not reachable"
         elif (type(exception).__name__ == "AuthenticationException"):
             print("Error : Authentication failed")
+            result["message"] = "Authentication failed"
         elif (type(exception).__name__ == "OSError"):
             return update_cert()
-        return -1
+        else:
+            print(type(exception).__name__)
+            print(exception)
+            result["message"] = type(exception).__name__
+        result["code"] = -1
+        return result
     print("Connected")
 
     # SCP Download
@@ -112,7 +120,10 @@ def update_cert():
             folders_match.append(folder_match)
     if(len(folders_match) == 0):
         shutil.rmtree(dir_temp, onerror=del_rw)
-        sys.exit("No domains available")
+        print("No domains available")
+        result["code"] = -1
+        result["message"] = "No domains available"
+        return result
 
     # Copy files
     print("\nCopy files...")
@@ -127,12 +138,14 @@ def update_cert():
     shutil.rmtree(dir_temp, onerror=del_rw)
     print("Done\n")
 
-    if(len(folders_match) > 0):
-        return 1
-    elif(len(folders_match) == 0):
-        return 0
+    if (len(folders_match) > 0):
+        result["code"] = 1
+        result["message"] = "Done"
+        return result
     else:
-        return -1
+        result["code"] = -1
+        result["message"] = "Error"
+        return result
 
 
 if __name__ == "__main__":
