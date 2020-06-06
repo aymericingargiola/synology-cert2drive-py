@@ -171,7 +171,7 @@ fileMenu.add_command(label="Exit", command=window.quit)
 window.title("Synology synocert2drive")
 window.geometry("800x215")
 window.minsize(800, 215)
-window.iconbitmap(default=ICON)
+#window.iconbitmap(default=ICON)
 window.config(menu=menubar, background=c_black)
 
 # Frame

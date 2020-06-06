@@ -9,7 +9,9 @@ import json
 import paramiko
 import scp
 
-with open('config/config.json', 'r') as configJson:
+script_dir = os.path.dirname(__file__)
+
+with open(os.path.join(script_dir, 'config/config.json'), 'r') as configJson:
     settings = json.load(configJson)
 
 
@@ -28,19 +30,18 @@ def force_copy(file, dest, name):
     try:
         shutil.copy(file, dest)
     except IOError:
-        os.chmod(dest+"\\"+name, stat.S_IWRITE)
+        os.chmod(dest+"/"+name, stat.S_IWRITE)
         shutil.copy(file, dest)
 
 
 def update_cert():
     result = collections.defaultdict(list)
-
     # Process temp directory
     dir_temp = 'temp'
-    if (os.path.exists(pathlib.Path(dir_temp).resolve())):
-        shutil.rmtree(dir_temp, onerror=del_rw)
+    if (os.path.exists(pathlib.Path(os.path.join(script_dir, dir_temp)).resolve())):
+        shutil.rmtree(os.path.join(script_dir, dir_temp), onerror=del_rw)
     else:
-        create_dir(dir_temp)
+        create_dir(os.path.join(script_dir, dir_temp))
 
     # SSH Connection
     print("\nConnecting to Synology...")
@@ -55,6 +56,7 @@ def update_cert():
                 settings['ssh_config']['private_key'])
         )
     except Exception as exception:
+        print(exception)
         if (type(exception).__name__ == "UnicodeDecodeError"):
             print("Error : This private key is not supported")
             result["message"] = "This private key is not supported"
@@ -83,16 +85,16 @@ def update_cert():
     # SCP Download
     print("\nDownloading certificates...")
     scp_client = scp.SCPClient(ssh.get_transport())
-    scp_client.get('/usr/syno/etc/certificate/_archive/', dir_temp, True)
+    scp_client.get('/usr/syno/etc/certificate/_archive/', os.path.join(script_dir, dir_temp), True)
     ssh.close()
     print("Downloaded")
 
     # Get domains in temp folder
     print("\nGet domains from Synology's certificates...")
     syno_domains = []
-    for folder in os.walk(dir_temp):
+    for folder in os.walk(os.path.join(script_dir, dir_temp)):
         if ('renew.json' in folder[2]):
-            with open(folder[0] + "\\" + "renew.json", "r") as renewJson:
+            with open(os.path.join(script_dir, folder[0] + "/" + "renew.json"), "r") as renewJson:
                 syno_domain = collections.defaultdict(list)
                 syno_domain["domain"] = json.load(renewJson)['domains']
                 syno_domain["folder"] = folder[0]
@@ -119,7 +121,7 @@ def update_cert():
             folder_match["user_folder"] = user_certificate["folder"]
             folders_match.append(folder_match)
     if(len(folders_match) == 0):
-        shutil.rmtree(dir_temp, onerror=del_rw)
+        shutil.rmtree(os.path.join(script_dir, dir_temp), onerror=del_rw)
         print("No domains available")
         result["code"] = -1
         result["message"] = "No domains available"
@@ -135,7 +137,7 @@ def update_cert():
                     match["syno_folder"], file_name), match["user_folder"], file_name)
                 print("Copied " + match["syno_folder"] + "\\" +
                       file_name + " -> " + match["user_folder"])
-    shutil.rmtree(dir_temp, onerror=del_rw)
+    shutil.rmtree(os.path.join(script_dir, dir_temp), onerror=del_rw)
     print("Done\n")
 
     if (len(folders_match) > 0):
